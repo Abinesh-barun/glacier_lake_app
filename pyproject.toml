@@ -1,0 +1,14 @@
+[project]
+name = "glacier-lake"
+version = "0.1.0"
+description = "Glacial lake change detection with YOLO"
+requires-python = ">=3.14"
+dependencies = [
+    "streamlit",
+    "ultralytics",
+    "opencv-python-headless",
+    "numpy",
+    "langchain",
+    "langchain-groq",
+    "python-dotenv>=1.2.4",
+]
