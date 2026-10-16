@@ -151,7 +151,6 @@ def send_risk_alert(facts, subject_area="Glacial lake"):
     return out["messages"][-1].content
 
 
-# ============================================================ 4. FALLBACK
 def send_plain_alert(facts, subject_area="Glacial lake"):
     """No-LLM version: fixed message built from the numbers."""
     subject = f"Glacier alert: {subject_area.lower()} change is {facts['risk']}"
