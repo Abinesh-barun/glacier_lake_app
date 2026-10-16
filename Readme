@@ -1,0 +1,13 @@
+# GlacierWatch
+
+A simple glacial lake monitoring and early-warning app.
+
+Upload two satellite images of the same area (earlier and later). The app:
+
+- finds the glacial lake or glacier in each image using YOLO
+- measures how much the area grew or shrank
+- gives a risk score (above 1 = high risk)
+- writes a short report and answers questions using a LangChain agent
+- automatically emails alerts to subscribers when the risk is high
+
+**Built with:** Python, Streamlit, YOLO, OpenCV, LangChain, Groq, SQLite
