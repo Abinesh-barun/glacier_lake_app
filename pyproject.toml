@@ -11,4 +11,5 @@ dependencies = [
     "langchain",
     "langchain-groq",
     "python-dotenv>=1.2.4",
+    "gtts>=2.5.4",
 ]

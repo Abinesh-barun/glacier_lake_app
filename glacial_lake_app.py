@@ -17,6 +17,7 @@ works and writes a plain report.
 Run with:  uv run streamlit run glacial_lake_app.py
 """
 import hashlib
+import html
 import os
 
 import cv2
@@ -24,6 +25,7 @@ import numpy as np
 import streamlit as st
 
 import email_alert
+import voice_assistant
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -219,6 +221,55 @@ def agent_report(facts, subject):
 
 
 # ----------------------------------------------------------------------------
+# Voice assistant (separate agent + tool, see voice_assistant.py)
+# ----------------------------------------------------------------------------
+def chat_box(placeholder):
+    """The chat input with a mic button inside it. Returns (text, audio).
+    Needs a recent Streamlit; on an older one it falls back to a chat box
+    with a separate voice recorder next to it."""
+    try:
+        box = st.chat_input(placeholder, accept_audio=True)
+    except TypeError:
+        chat_col, voice_col = st.columns([3, 2], vertical_alignment="bottom")
+        with chat_col:
+            text = st.chat_input(placeholder)
+        with voice_col:
+            audio = st.audio_input("🎙️ Or ask by voice", key="voice_q")
+        return text, audio
+    if box is None:
+        return None, None
+    return box.text, box.audio
+
+
+def voice_answer(audio, facts, subject):
+    """Answer a recorded question and show it. Streamlit re-runs the page on
+    every click, so the answer is kept in session_state and each recording is
+    only sent to the assistant once."""
+    if audio is not None:
+        data = audio.getvalue()
+        audio_id = hashlib.md5(data).hexdigest()
+        if st.session_state.get("voice_id") != audio_id:
+            with st.spinner("Listening and thinking..."):
+                try:
+                    st.session_state["voice_result"] = voice_assistant.answer_audio(data, facts, subject)
+                except Exception as e:
+                    st.session_state["voice_result"] = None
+                    st.error(f"The voice assistant could not answer: {e}")
+            st.session_state["voice_id"] = audio_id
+    result = st.session_state.get("voice_result")
+    if audio is not None and result:
+        question, answer, speech = result
+        if not question:
+            st.info("🎙️ I could not hear anything. Please record your question again.")
+            return
+        with st.container(border=True):
+            st.markdown('<span class="voice-tag">🎙️ Voice assistant</span>', unsafe_allow_html=True)
+            st.markdown(f'<div class="voice-answer">{html.escape(answer)}</div>', unsafe_allow_html=True)
+            if speech:
+                st.audio(speech, format="audio/mp3")
+
+
+# ----------------------------------------------------------------------------
 # Email alerts (automatic + manual)
 # ----------------------------------------------------------------------------
 def send_alert(facts, subject):
@@ -267,6 +318,11 @@ CSS = """
 [data-testid="stMetric"] {border: 1px solid rgba(128,128,128,.28);
        padding: 12px 16px; border-radius: 12px;}
 .sub-row {padding: 2px 0;}
+.voice-tag {display: inline-block; background: rgba(28,126,168,.18); color: #4db8e8;
+            font-size: .78rem; font-weight: 600; letter-spacing: .03em;
+            padding: 3px 12px; border-radius: 999px; margin-bottom: 10px;}
+.voice-answer {font-size: 1.08rem; line-height: 1.65; padding: 2px 0 12px 14px;
+               border-left: 3px solid #1c7ea8;}
 </style>
 """
 
@@ -372,13 +428,14 @@ def page_detection():
         st.markdown(agent_report(facts, subject) or local_report(r, subject))
         if os.environ.get("GROQ_API_KEY"):
             st.divider()
-            question = st.chat_input("Ask about this result, e.g. Is it dangerous?")
+            question, audio = chat_box("Ask about this result, e.g. Is it dangerous?")
             if question:
                 with st.spinner("Thinking..."):
                     try:
                         st.markdown(ask(build_agent(facts, subject), question))
                     except Exception as e:
                         st.error(f"The assistant could not answer: {e}")
+            voice_answer(audio, facts, subject)
         else:
             st.caption("Set GROQ_API_KEY to get an AI-written report and ask questions.")
 
