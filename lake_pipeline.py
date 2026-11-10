@@ -158,6 +158,7 @@ def inventory_history(lon, lat, radius_km):
         if not (os.path.exists(shp) and os.path.exists(prj)):
             continue
         with open(prj) as fh:
+            
             crs = CRS.from_wkt(fh.read())
         to_proj = Transformer.from_crs("EPSG:4326", crs, always_xy=True)
         to_lonlat = Transformer.from_crs(crs, "EPSG:4326", always_xy=True)
